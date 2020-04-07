@@ -5,6 +5,7 @@ pub struct Infinint {
     digits: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl Infinint {
     pub fn new() -> Infinint {
         Infinint {
@@ -14,7 +15,7 @@ impl Infinint {
     }
 
     fn get_digits(&self) -> Vec<u8> {
-        let mut digits_vector: Vec<u8> = Vec::with_capacity(self.digits.len() * 2);
+        let mut digits_vector = Vec::with_capacity(self.digits.len() * 2);
 
         for byte in &self.digits {
             let digit_pair = decimal_digits(*byte).unwrap();
