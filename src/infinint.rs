@@ -12,6 +12,22 @@ impl Infinint {
             digits: vec![0],
         }
     }
+
+    fn get_digits(&self) -> Vec<u8> {
+        let mut digits_vector: Vec<u8> = Vec::with_capacity(self.digits.len() * 2);
+
+        for byte in &self.digits {
+            let digit_pair = decimal_digits(*byte).unwrap();
+            digits_vector.push(digit_pair.0);
+            digits_vector.push(digit_pair.1);
+        }
+        match digits_vector.last() {
+            Some(d) if *d == 0 => digits_vector.pop(),
+            _ => None,
+        };
+
+        digits_vector
+    }
 }
 
 impl fmt::Debug for Infinint {
@@ -31,7 +47,7 @@ impl fmt::Debug for Infinint {
                 .as_str(),
             );
         }
-        debug_out.push_str("]\n");
+        debug_out.push_str("]");
         write!(f, "{}", debug_out)
     }
 }
@@ -63,6 +79,35 @@ impl From<i32> for Infinint {
         }
 
         Infinint { negative, digits }
+    }
+}
+
+impl fmt::Display for Infinint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut raw_digits = self.get_digits();
+
+        let num_digits = raw_digits.len();
+        let num_chars = num_digits + (num_digits - 1) / 3;
+        let capacity = if self.negative {
+            num_chars + 1
+        } else {
+            num_chars
+        };
+
+        let mut number = String::with_capacity(capacity);
+
+        if self.negative {
+            number.push('-');
+        };
+        for i in 0..num_chars {
+            number.push(if (num_chars - i) % 4 == 0 {
+                ','
+            } else {
+                std::char::from_digit(raw_digits.pop().unwrap() as u32, 10).unwrap()
+            });
+        }
+
+        write!(f, "{}", number)
     }
 }
 
