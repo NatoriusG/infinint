@@ -2,7 +2,7 @@ use std::fmt;
 
 pub struct Infinint {
     negative: bool,
-    digits: Vec<u8>,
+    digits_vec: Vec<u8>,
 }
 
 #[allow(dead_code)]
@@ -10,14 +10,14 @@ impl Infinint {
     pub fn new() -> Infinint {
         Infinint {
             negative: false,
-            digits: vec![0],
+            digits_vec: vec![0],
         }
     }
 
-    fn get_digits(&self) -> Vec<u8> {
-        let mut digits_vector = Vec::with_capacity(self.digits.len() * 2);
+    fn digits(&self) -> Vec<u8> {
+        let mut digits_vector = Vec::with_capacity(self.digits_vec.len() * 2);
 
-        for byte in &self.digits {
+        for byte in &self.digits_vec {
             let digit_pair = decimal_digits(*byte).unwrap();
             digits_vector.push(digit_pair.0);
             digits_vector.push(digit_pair.1);
@@ -36,7 +36,7 @@ impl fmt::Debug for Infinint {
         let mut debug_out = String::new();
         debug_out.push_str(format!("\nnegative: {}\n", self.negative).as_str());
         debug_out.push_str(format!("digits: [\n").as_str());
-        for d in &self.digits {
+        for d in &self.digits_vec {
             debug_out.push_str(
                 format!(
                     "    {:04b}_{:04b} -> ({}, {})\n",
@@ -61,7 +61,7 @@ impl From<i32> for Infinint {
             0 => 1,
             _ => (((n as f64).abs().log10()) as usize / 2) + 1,
         };
-        let mut digits: Vec<u8> = Vec::with_capacity(bytes_needed);
+        let mut digits_vec: Vec<u8> = Vec::with_capacity(bytes_needed);
 
         let mut n = if n >= 0 { n } else { -n };
 
@@ -76,16 +76,19 @@ impl From<i32> for Infinint {
             d = d | n_mod as u8;
             n /= 10;
 
-            digits.push(d);
+            digits_vec.push(d);
         }
 
-        Infinint { negative, digits }
+        Infinint {
+            negative,
+            digits_vec,
+        }
     }
 }
 
 impl fmt::Display for Infinint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut raw_digits = self.get_digits();
+        let mut raw_digits = self.digits();
 
         let num_digits = raw_digits.len();
         let num_chars = num_digits + (num_digits - 1) / 3;
