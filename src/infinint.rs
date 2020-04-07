@@ -29,6 +29,34 @@ impl Infinint {
 
         digits_vector
     }
+
+    fn digits_vec_from_int(n: u128) -> Vec<u8> {
+        let mut n = n;
+
+        let bytes_needed = match n {
+            0 => 1,
+            _ => (((n as f64).abs().log10()) as usize / 2) + 1,
+        };
+        let next_exp = (bytes_needed as f64).log2().ceil();
+        let next_pow_of_two = 2.0_f64.powi(next_exp as i32);
+        let mut digits_vec: Vec<u8> = Vec::with_capacity(next_pow_of_two as usize);
+
+        while n > 0 {
+            let mut d: u8;
+
+            let n_mod = n % 10;
+            d = (n_mod << 4) as u8;
+            n /= 10;
+
+            let n_mod = n % 10;
+            d = d | n_mod as u8;
+            n /= 10;
+
+            digits_vec.push(d);
+        }
+
+        digits_vec
+    }
 }
 
 impl fmt::Debug for Infinint {
@@ -53,36 +81,86 @@ impl fmt::Debug for Infinint {
     }
 }
 
-impl From<i32> for Infinint {
-    fn from(n: i32) -> Self {
-        let negative = n < 0;
+impl From<u128> for Infinint {
+    fn from(n: u128) -> Infinint {
+        let digits_vec = Infinint::digits_vec_from_int(n);
 
-        let bytes_needed = match n {
-            0 => 1,
-            _ => (((n as f64).abs().log10()) as usize / 2) + 1,
-        };
-        let mut digits_vec: Vec<u8> = Vec::with_capacity(bytes_needed);
-
-        let mut n = if n >= 0 { n } else { -n };
-
-        while n > 0 {
-            let mut d: u8;
-
-            let n_mod = n % 10;
-            d = (n_mod << 4) as u8;
-            n /= 10;
-
-            let n_mod = n % 10;
-            d = d | n_mod as u8;
-            n /= 10;
-
-            digits_vec.push(d);
+        Infinint {
+            negative: false,
+            digits_vec,
         }
+    }
+}
+
+impl From<i128> for Infinint {
+    fn from(n: i128) -> Infinint {
+        let negative = n < 0;
+        let digits_vec = Infinint::digits_vec_from_int(n.abs() as u128);
 
         Infinint {
             negative,
             digits_vec,
         }
+    }
+}
+
+impl From<usize> for Infinint {
+    fn from(n: usize) -> Infinint {
+        Infinint::from(n as u128)
+    }
+}
+
+impl From<isize> for Infinint {
+    fn from(n: isize) -> Infinint {
+        Infinint::from(n as i128)
+    }
+}
+
+impl From<u64> for Infinint {
+    fn from(n: u64) -> Infinint {
+        Infinint::from(u128::from(n))
+    }
+}
+
+impl From<i64> for Infinint {
+    fn from(n: i64) -> Infinint {
+        Infinint::from(i128::from(n))
+    }
+}
+
+impl From<u32> for Infinint {
+    fn from(n: u32) -> Infinint {
+        Infinint::from(u128::from(n))
+    }
+}
+
+impl From<i32> for Infinint {
+    fn from(n: i32) -> Infinint {
+        Infinint::from(i128::from(n))
+    }
+}
+
+impl From<u16> for Infinint {
+    fn from(n: u16) -> Infinint {
+        Infinint::from(u128::from(n))
+    }
+}
+
+impl From<i16> for Infinint {
+    fn from(n: i16) -> Infinint {
+        Infinint::from(i128::from(n))
+    }
+}
+
+impl From<u8> for Infinint {
+    fn from(n: u8) -> Infinint {
+        Infinint::from(u128::from(n))
+    }
+}
+
+impl From<i8> for Infinint {
+    fn from(n: i8) -> Infinint {
+        Infinint::from(i128::from(n))
     }
 }
 
