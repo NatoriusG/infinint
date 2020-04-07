@@ -44,12 +44,12 @@ impl Infinint {
         while n > 0 {
             let mut d: u8;
 
-            let n_mod = n % 10;
-            d = (n_mod << 4) as u8;
+            let n_mod = (n % 10) as u8;
+            d = n_mod << 4;
             n /= 10;
 
-            let n_mod = n % 10;
-            d = d | n_mod as u8;
+            let n_mod = (n % 10) as u8;
+            d = n_mod | d;
             n /= 10;
 
             digits_vec.push(d);
@@ -106,12 +106,14 @@ impl From<i128> for Infinint {
 
 impl From<usize> for Infinint {
     fn from(n: usize) -> Infinint {
+        // since usize < u128, conversion is safe
         Infinint::from(n as u128)
     }
 }
 
 impl From<isize> for Infinint {
     fn from(n: isize) -> Infinint {
+        // since isize < i128, conversion is safe
         Infinint::from(n as i128)
     }
 }
@@ -185,7 +187,7 @@ impl fmt::Display for Infinint {
             number.push(if (num_chars - i) % 4 == 0 {
                 ','
             } else {
-                std::char::from_digit(raw_digits.pop().unwrap() as u32, 10).unwrap()
+                std::char::from_digit(raw_digits.pop().unwrap().into(), 10).unwrap()
             });
         }
 
@@ -209,7 +211,7 @@ fn decimal_digit_low(n: u8) -> Result<u8, &'static str> {
 
 fn decimal_digit_nybble(n: u8) -> Result<u8, &'static str> {
     if n < 10 {
-        Ok(n as u8)
+        Ok(n)
     } else {
         Err("digit too large")
     }
