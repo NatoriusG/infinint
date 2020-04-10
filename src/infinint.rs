@@ -41,18 +41,22 @@ impl Infinint {
         let next_pow_of_two = 2.0_f64.powi(next_exp as i32);
         let mut digits_vec: Vec<u8> = Vec::with_capacity(next_pow_of_two as usize);
 
-        while n > 0 {
-            let mut d: u8;
+        if n > 0 {
+            while n > 0 {
+                let mut d: u8;
 
-            let n_mod = (n % 10) as u8;
-            d = n_mod << 4;
-            n /= 10;
+                let n_mod = (n % 10) as u8;
+                d = n_mod << 4;
+                n /= 10;
 
-            let n_mod = (n % 10) as u8;
-            d = n_mod | d;
-            n /= 10;
+                let n_mod = (n % 10) as u8;
+                d = n_mod | d;
+                n /= 10;
 
-            digits_vec.push(d);
+                digits_vec.push(d);
+            }
+        } else {
+            digits_vec.push(0);
         }
 
         digits_vec
@@ -230,11 +234,17 @@ impl ops::Add<&Infinint> for &Infinint {
 
             let result_digit = (upper_result_digit << 4) | lower_result_digit;
 
-            result_digits_vec.push(result_digit);
+            if result_digit != 0 {
+                result_digits_vec.push(result_digit);
+            }
         }
 
         if carry > 0 {
             result_digits_vec.push(carry);
+        }
+
+        if result_digits_vec.len() == 0 {
+            result_digits_vec.push(0);
         }
 
         // since the first lines short-circuit return if the signs of self and other are different,
@@ -242,6 +252,57 @@ impl ops::Add<&Infinint> for &Infinint {
         // is the sign of both of the inputs, and since they are the same, we only have to check one.
         Infinint {
             negative: self.negative,
+            digits_vec: result_digits_vec,
+        }
+    }
+}
+
+impl ops::Sub<&Infinint> for &Infinint {
+    type Output = Infinint;
+
+    fn sub(self, other: &Infinint) -> Infinint {
+        // check for nonstandard sub
+
+        let mut self_iter = self.digits_vec.iter();
+        let mut other_iter = other.digits_vec.iter();
+        let mut carry = 0;
+        let mut result_digits_vec: Vec<u8> = Vec::with_capacity(std::cmp::max(
+            self.digits_vec.capacity(),
+            other.digits_vec.capacity(),
+        ));
+
+        loop {
+            let self_next_digits = *self_iter.next().unwrap_or(&0);
+            let other_next_digits = *other_iter.next().unwrap_or(&0);
+
+            if self_next_digits == 0 && other_next_digits == 0 {
+                break;
+            }
+
+            let self_next_digits = decimal_digits(self_next_digits).unwrap();
+            let other_next_digits = decimal_digits(other_next_digits).unwrap();
+
+            let (upper_result_digit, new_carry) =
+                decimal_subtract_with_carry(self_next_digits.0, other_next_digits.0, carry);
+            carry = new_carry;
+
+            let (lower_result_digit, new_carry) =
+                decimal_subtract_with_carry(self_next_digits.1, other_next_digits.1, carry);
+            carry = new_carry;
+
+            let result_digit = (upper_result_digit << 4) | lower_result_digit;
+
+            if result_digit != 0 {
+                result_digits_vec.push(result_digit);
+            }
+        }
+
+        if result_digits_vec.len() == 0 {
+            result_digits_vec.push(0);
+        }
+
+        Infinint {
+            negative: false,
             digits_vec: result_digits_vec,
         }
     }
@@ -273,5 +334,14 @@ fn decimal_add_with_carry(n: u8, m: u8, carry: u8) -> (u8, u8) {
     let result = n + m + carry;
     let carry = result / 10;
     let result = result % 10;
+    (result, carry)
+}
+
+fn decimal_subtract_with_carry(n: u8, m: u8, carry: u8) -> (u8, u8) {
+    let (result, carry) = if n >= (m + carry) {
+        (n - m - carry, 0)
+    } else {
+        ((n + 10) - m - carry, 1)
+    };
     (result, carry)
 }
