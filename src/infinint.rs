@@ -81,6 +81,32 @@ impl fmt::Debug for Infinint {
     }
 }
 
+impl fmt::Display for Infinint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut raw_digits = self.digits();
+
+        let num_digits = raw_digits.len();
+        let num_chars = num_digits
+            + if !f.alternate() {
+                (num_digits - 1) / 3
+            } else {
+                0
+            };
+
+        let mut number = String::with_capacity(num_chars);
+
+        for i in 0..num_chars {
+            number.push(if !f.alternate() && (num_chars - i) % 4 == 0 {
+                ','
+            } else {
+                std::char::from_digit(raw_digits.pop().unwrap().into(), 10).unwrap()
+            });
+        }
+
+        f.pad_integral(!self.negative, "", &number)
+    }
+}
+
 impl From<u128> for Infinint {
     fn from(n: u128) -> Infinint {
         let digits_vec = Infinint::digits_vec_from_int(n);
@@ -194,29 +220,13 @@ impl ops::Add<&Infinint> for &Infinint {
             let self_next_digits = decimal_digits(self_next_digits).unwrap();
             let other_next_digits = decimal_digits(other_next_digits).unwrap();
 
-            println!(
-                "====> adding {} and {} with carry {}",
-                self_next_digits.0, other_next_digits.0, carry
-            );
-            let mut upper_result_digit = self_next_digits.0 + other_next_digits.0 + carry;
-            carry = upper_result_digit / 10;
-            upper_result_digit %= 10;
-            println!(
-                "====> result is {} with carry {}",
-                upper_result_digit, carry
-            );
+            let (upper_result_digit, new_carry) =
+                decimal_add_with_carry(self_next_digits.0, other_next_digits.0, carry);
+            carry = new_carry;
 
-            println!(
-                "====> adding {} and {} with carry {}",
-                self_next_digits.1, other_next_digits.1, carry
-            );
-            let mut lower_result_digit = self_next_digits.1 + other_next_digits.1 + carry;
-            carry = lower_result_digit / 10;
-            lower_result_digit %= 10;
-            println!(
-                "====> result is {} with carry {}",
-                lower_result_digit, carry
-            );
+            let (lower_result_digit, new_carry) =
+                decimal_add_with_carry(self_next_digits.1, other_next_digits.1, carry);
+            carry = new_carry;
 
             let result_digit = (upper_result_digit << 4) | lower_result_digit;
 
@@ -234,35 +244,6 @@ impl ops::Add<&Infinint> for &Infinint {
             negative: self.negative,
             digits_vec: result_digits_vec,
         }
-    }
-}
-
-impl fmt::Display for Infinint {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut raw_digits = self.digits();
-
-        let num_digits = raw_digits.len();
-        let num_chars = num_digits + (num_digits - 1) / 3;
-        let capacity = if self.negative {
-            num_chars + 1
-        } else {
-            num_chars
-        };
-
-        let mut number = String::with_capacity(capacity);
-
-        if self.negative {
-            number.push('-');
-        };
-        for i in 0..num_chars {
-            number.push(if (num_chars - i) % 4 == 0 {
-                ','
-            } else {
-                std::char::from_digit(raw_digits.pop().unwrap().into(), 10).unwrap()
-            });
-        }
-
-        write!(f, "{}", number)
     }
 }
 
@@ -286,4 +267,11 @@ fn decimal_digit_nybble(n: u8) -> Result<u8, &'static str> {
     } else {
         Err("digit too large")
     }
+}
+
+fn decimal_add_with_carry(n: u8, m: u8, carry: u8) -> (u8, u8) {
+    let result = n + m + carry;
+    let carry = result / 10;
+    let result = result % 10;
+    (result, carry)
 }
