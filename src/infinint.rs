@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, ops};
 
 pub struct Infinint {
     negative: bool,
@@ -163,6 +163,77 @@ impl From<u8> for Infinint {
 impl From<i8> for Infinint {
     fn from(n: i8) -> Infinint {
         Infinint::from(i128::from(n))
+    }
+}
+
+impl ops::Add<&Infinint> for &Infinint {
+    type Output = Infinint;
+
+    fn add(self, other: &Infinint) -> Infinint {
+        if self.negative == false && other.negative == true {
+            // n + -m = n - m : short circuit return subtraction op
+        } else if self.negative == true && other.negative == false {
+            // -n + m = m - n : short circuit return subtraction op
+        } // otherwise, negative can be determined later
+
+        let mut self_iter = self.digits_vec.iter();
+        let mut other_iter = other.digits_vec.iter();
+        let mut carry = 0;
+        let mut result_digits_vec: Vec<u8> = Vec::with_capacity(
+            2 * std::cmp::max(self.digits_vec.capacity(), other.digits_vec.capacity()),
+        );
+
+        loop {
+            let self_next_digits = *self_iter.next().unwrap_or(&0);
+            let other_next_digits = *other_iter.next().unwrap_or(&0);
+
+            if self_next_digits == 0 && other_next_digits == 0 {
+                break;
+            }
+
+            let self_next_digits = decimal_digits(self_next_digits).unwrap();
+            let other_next_digits = decimal_digits(other_next_digits).unwrap();
+
+            println!(
+                "====> adding {} and {} with carry {}",
+                self_next_digits.0, other_next_digits.0, carry
+            );
+            let mut upper_result_digit = self_next_digits.0 + other_next_digits.0 + carry;
+            carry = upper_result_digit / 10;
+            upper_result_digit %= 10;
+            println!(
+                "====> result is {} with carry {}",
+                upper_result_digit, carry
+            );
+
+            println!(
+                "====> adding {} and {} with carry {}",
+                self_next_digits.1, other_next_digits.1, carry
+            );
+            let mut lower_result_digit = self_next_digits.1 + other_next_digits.1 + carry;
+            carry = lower_result_digit / 10;
+            lower_result_digit %= 10;
+            println!(
+                "====> result is {} with carry {}",
+                lower_result_digit, carry
+            );
+
+            let result_digit = (upper_result_digit << 4) | lower_result_digit;
+
+            result_digits_vec.push(result_digit);
+        }
+
+        if carry > 0 {
+            result_digits_vec.push(carry);
+        }
+
+        // since the first lines short-circuit return if the signs of self and other are different,
+        // we can assume self and other have the same sign. if that is the case, the sign of the result
+        // is the sign of both of the inputs, and since they are the same, we only have to check one.
+        Infinint {
+            negative: self.negative,
+            digits_vec: result_digits_vec,
+        }
     }
 }
 
