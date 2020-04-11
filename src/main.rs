@@ -6,15 +6,18 @@ fn main() {
     let test = Infinint::from(1998);
     println!("test: {}", test);
 
-    let a = Infinint::from(128);
-    let b = Infinint::from(64);
-    let c = Infinint::from(256);
-    let d = Infinint::from(128);
-    let e = Infinint::from(1234567);
-    let f = Infinint::from(1234568);
+    let a = Infinint::from(4);
+    let b = Infinint::from(-8);
+    let c = Infinint::from(16);
+    let d = Infinint::from(-32);
 
-    println!("{} cmp {}: {:?}", a, b, &a.cmp(&b));
-    println!("{} cmp {}: {:?}", a, c, &a.cmp(&c));
-    println!("{} cmp {}: {:?}", a, d, &a.cmp(&d));
-    println!("{} cmp {}: {:?}", e, f, &e.cmp(&f));
+    println!("{} - {} = {}", c, a, &c - &a);
+    println!("{} - {} = {}", a, b, &a - &b);
+    println!("{} - {} = {}", b, a, &b - &a);
+    println!("{} - {} = {}", b, d, &b - &d);
+
+    println!("{} + {} = {}", a, b, &a + &b);
+    println!("{} + {} = {}", b, c, &b + &c);
+
+    println!("{} + {} = {}", a, -&a, &a + &(-&a));
 }

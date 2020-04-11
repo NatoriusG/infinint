@@ -254,15 +254,33 @@ impl cmp::PartialEq for Infinint {
     }
 }
 
+impl ops::Neg for &Infinint {
+    type Output = Infinint;
+
+    fn neg(self) -> Infinint {
+        let new_negative = !self.negative;
+        let mut new_digits_vec = Vec::with_capacity(self.digits_vec.capacity());
+        new_digits_vec.resize(self.digits_vec.len(), 0);
+        new_digits_vec.copy_from_slice(&self.digits_vec[..]);
+
+        Infinint {
+            negative: new_negative,
+            digits_vec: new_digits_vec,
+        }
+    }
+}
+
 impl ops::Add<&Infinint> for &Infinint {
     type Output = Infinint;
 
     fn add(self, other: &Infinint) -> Infinint {
         if self.negative == false && other.negative == true {
-            return self - other;
+            return self - &-other;
         } else if self.negative == true && other.negative == false {
-            return other - self;
+            return other - &-self;
         } // otherwise, negative can be determined later
+
+        println!("CALCULATING: {} + {}", self, other);
 
         let mut self_iter = self.digits_vec.iter();
         let mut other_iter = other.digits_vec.iter();
@@ -319,7 +337,21 @@ impl ops::Sub<&Infinint> for &Infinint {
     type Output = Infinint;
 
     fn sub(self, other: &Infinint) -> Infinint {
-        // check for nonstandard sub
+        if self.negative == false && other.negative == true {
+            return self + &-other;
+        } else if self.negative == true && other.negative == false {
+            return -&(&-self + other);
+        } else if self.negative == true && other.negative == true {
+            return &-other - &-self;
+        }
+
+        match self.cmp(other) {
+            cmp::Ordering::Less => return -&(other - self),
+            cmp::Ordering::Equal => return Infinint::from(0),
+            cmp::Ordering::Greater => (),
+        }
+
+        println!("CALCULATING: {} - {}", self, other);
 
         let mut self_iter = self.digits_vec.iter();
         let mut other_iter = other.digits_vec.iter();
