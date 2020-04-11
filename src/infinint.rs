@@ -1,4 +1,4 @@
-use std::{fmt, ops};
+use std::{cmp, fmt, ops};
 
 pub struct Infinint {
     negative: bool,
@@ -196,21 +196,79 @@ impl From<i8> for Infinint {
     }
 }
 
+impl cmp::Ord for Infinint {
+    fn cmp(&self, other: &Infinint) -> cmp::Ordering {
+        if self.digits_vec.len() < other.digits_vec.len() {
+            println!("a has less digits than b");
+            cmp::Ordering::Less
+        } else if self.digits_vec.len() > other.digits_vec.len() {
+            println!("a has more digits than b");
+            cmp::Ordering::Greater
+        } else {
+            let mut self_iter = self.digits_vec.iter().rev();
+            let mut other_iter = other.digits_vec.iter().rev();
+
+            loop {
+                let self_next_digits = *self_iter.next().unwrap_or(&0);
+                let other_next_digits = *other_iter.next().unwrap_or(&0);
+
+                if self_next_digits == 0 && other_next_digits == 0 {
+                    println!("both are None/0, returning equal");
+                    return cmp::Ordering::Equal;
+                }
+
+                let self_next_digits = decimal_digits(self_next_digits).unwrap();
+                let other_next_digits = decimal_digits(other_next_digits).unwrap();
+
+                if self_next_digits.1 < other_next_digits.1 {
+                    println!("{} < {}, a < b", self_next_digits.1, other_next_digits.1);
+                    return cmp::Ordering::Less;
+                } else if self_next_digits.1 > other_next_digits.1 {
+                    println!("{} > {}, a > b", self_next_digits.1, other_next_digits.1);
+                    return cmp::Ordering::Greater;
+                }
+
+                if self_next_digits.0 < other_next_digits.0 {
+                    println!("{} < {}, a < b", self_next_digits.0, other_next_digits.0);
+                    return cmp::Ordering::Less;
+                } else if self_next_digits.0 > other_next_digits.0 {
+                    println!("{} > {}, a > b", self_next_digits.0, other_next_digits.0);
+                    return cmp::Ordering::Greater;
+                }
+            }
+        }
+    }
+}
+
+impl cmp::PartialOrd for Infinint {
+    fn partial_cmp(&self, other: &Infinint) -> Option<cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl cmp::Eq for Infinint {}
+
+impl cmp::PartialEq for Infinint {
+    fn eq(&self, other: &Infinint) -> bool {
+        self.cmp(other) == cmp::Ordering::Equal
+    }
+}
+
 impl ops::Add<&Infinint> for &Infinint {
     type Output = Infinint;
 
     fn add(self, other: &Infinint) -> Infinint {
         if self.negative == false && other.negative == true {
-            // n + -m = n - m : short circuit return subtraction op
+            return self - other;
         } else if self.negative == true && other.negative == false {
-            // -n + m = m - n : short circuit return subtraction op
+            return other - self;
         } // otherwise, negative can be determined later
 
         let mut self_iter = self.digits_vec.iter();
         let mut other_iter = other.digits_vec.iter();
         let mut carry = 0;
         let mut result_digits_vec: Vec<u8> = Vec::with_capacity(
-            2 * std::cmp::max(self.digits_vec.capacity(), other.digits_vec.capacity()),
+            2 * cmp::max(self.digits_vec.capacity(), other.digits_vec.capacity()),
         );
 
         loop {
@@ -266,7 +324,7 @@ impl ops::Sub<&Infinint> for &Infinint {
         let mut self_iter = self.digits_vec.iter();
         let mut other_iter = other.digits_vec.iter();
         let mut carry = 0;
-        let mut result_digits_vec: Vec<u8> = Vec::with_capacity(std::cmp::max(
+        let mut result_digits_vec: Vec<u8> = Vec::with_capacity(cmp::max(
             self.digits_vec.capacity(),
             other.digits_vec.capacity(),
         ));
