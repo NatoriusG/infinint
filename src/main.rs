@@ -17,7 +17,7 @@ fn main() {
     println!("{} - {} = {}", b, d, &b - &d);
 
     println!("{} + {} = {}", a, b, &a + &b);
-    println!("{} + {} = {}", b, c, &b + &c);
+    println!("{} + {} = {}", d, c, &d + &c);
 
     println!("{} + {} = {}", a, -&a, &a + &(-&a));
 }

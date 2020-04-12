@@ -61,6 +61,222 @@ impl Infinint {
 
         digits_vec
     }
+
+    fn cmp_digits(n_digits_vec: &Vec<u8>, m_digits_vec: &Vec<u8>) -> cmp::Ordering {
+        let mut self_iter = n_digits_vec.iter().rev();
+        let mut other_iter = m_digits_vec.iter().rev();
+
+        loop {
+            let n_next_digits = *self_iter.next().unwrap_or(&0);
+            let m_next_digits = *other_iter.next().unwrap_or(&0);
+
+            if n_next_digits == 0 && m_next_digits == 0 {
+                return cmp::Ordering::Equal;
+            }
+
+            let n_next_digits = decimal_digits(n_next_digits).unwrap();
+            let m_next_digits = decimal_digits(m_next_digits).unwrap();
+
+            if n_next_digits.1 < m_next_digits.1 {
+                return cmp::Ordering::Less;
+            } else if n_next_digits.1 > m_next_digits.1 {
+                return cmp::Ordering::Greater;
+            }
+
+            if n_next_digits.0 < m_next_digits.0 {
+                return cmp::Ordering::Less;
+            } else if n_next_digits.0 > m_next_digits.0 {
+                return cmp::Ordering::Greater;
+            }
+        }
+    }
+
+    fn infinint_cmp(n: &Infinint, m: &Infinint, negate_n: bool, negate_m: bool) -> cmp::Ordering {
+        let n_negative = if negate_n == false {
+            n.negative
+        } else {
+            !n.negative
+        };
+        let m_negative = if negate_m == false {
+            m.negative
+        } else {
+            !m.negative
+        };
+
+        if n_negative == true && m_negative == false {
+            cmp::Ordering::Less
+        } else if n_negative == false && m_negative == true {
+            return cmp::Ordering::Greater;
+        } else {
+            if n.digits_vec.len() < m.digits_vec.len() {
+                cmp::Ordering::Less
+            } else if n.digits_vec.len() > m.digits_vec.len() {
+                cmp::Ordering::Greater
+            } else {
+                let digits_ordering = Infinint::cmp_digits(&n.digits_vec, &m.digits_vec);
+
+                if n_negative == true {
+                    digits_ordering.reverse()
+                } else {
+                    digits_ordering
+                }
+            }
+        }
+    }
+
+    fn infinint_add(
+        n: &Infinint,
+        m: &Infinint,
+        negate_n: bool,
+        negate_m: bool,
+        negate_result: bool,
+    ) -> Infinint {
+        let n_negative = if negate_n == false {
+            n.negative
+        } else {
+            !n.negative
+        };
+        let m_negative = if negate_m == false {
+            m.negative
+        } else {
+            !m.negative
+        };
+
+        if n_negative == false && m_negative == true {
+            return Infinint::infinint_subtract(n, m, negate_n, !negate_m, negate_result);
+        } else if n_negative == true && m_negative == false {
+            return Infinint::infinint_subtract(m, n, negate_m, !negate_n, negate_result);
+        } // otherwise, negative can be determined later
+
+        let mut n_iter = n.digits_vec.iter();
+        let mut m_iter = m.digits_vec.iter();
+        let mut carry = 0;
+        let mut result_digits_vec: Vec<u8> =
+            Vec::with_capacity(2 * cmp::max(n.digits_vec.capacity(), m.digits_vec.capacity()));
+
+        loop {
+            let n_next_digits = *n_iter.next().unwrap_or(&0);
+            let m_next_digits = *m_iter.next().unwrap_or(&0);
+
+            if n_next_digits == 0 && m_next_digits == 0 {
+                break;
+            }
+
+            let n_next_digits = decimal_digits(n_next_digits).unwrap();
+            let m_next_digits = decimal_digits(m_next_digits).unwrap();
+
+            let (upper_result_digit, new_carry) =
+                decimal_add_with_carry(n_next_digits.0, m_next_digits.0, carry);
+            carry = new_carry;
+
+            let (lower_result_digit, new_carry) =
+                decimal_add_with_carry(n_next_digits.1, m_next_digits.1, carry);
+            carry = new_carry;
+
+            let result_digit = (upper_result_digit << 4) | lower_result_digit;
+
+            if result_digit != 0 {
+                result_digits_vec.push(result_digit);
+            }
+        }
+
+        if carry > 0 {
+            result_digits_vec.push(carry);
+        }
+
+        if result_digits_vec.len() == 0 {
+            result_digits_vec.push(0);
+        }
+
+        let result_negative = if negate_result == false {
+            n_negative
+        } else {
+            !n_negative
+        };
+
+        Infinint {
+            negative: result_negative,
+            digits_vec: result_digits_vec,
+        }
+    }
+
+    fn infinint_subtract(
+        n: &Infinint,
+        m: &Infinint,
+        negate_n: bool,
+        negate_m: bool,
+        negate_result: bool,
+    ) -> Infinint {
+        let n_negative = if negate_n == false {
+            n.negative
+        } else {
+            !n.negative
+        };
+        let m_negative = if negate_m == false {
+            m.negative
+        } else {
+            !m.negative
+        };
+
+        if n_negative == false && m_negative == true {
+            return Infinint::infinint_add(n, m, negate_n, !negate_m, negate_result);
+        } else if n_negative == true && m_negative == false {
+            return Infinint::infinint_add(n, m, !negate_n, negate_m, !negate_result);
+        } else if n_negative == true && m_negative == true {
+            return Infinint::infinint_subtract(m, n, !negate_m, !negate_n, negate_result);
+        }
+
+        match Infinint::infinint_cmp(n, m, negate_n, negate_m) {
+            cmp::Ordering::Less => {
+                return Infinint::infinint_subtract(m, n, negate_m, negate_n, !negate_result);
+            }
+            cmp::Ordering::Equal => return Infinint::from(0),
+            cmp::Ordering::Greater => (),
+        }
+
+        let mut n_iter = n.digits_vec.iter();
+        let mut m_iter = m.digits_vec.iter();
+        let mut carry = 0;
+        let mut result_digits_vec: Vec<u8> =
+            Vec::with_capacity(cmp::max(n.digits_vec.capacity(), m.digits_vec.capacity()));
+
+        loop {
+            let n_next_digits = *n_iter.next().unwrap_or(&0);
+            let m_next_digits = *m_iter.next().unwrap_or(&0);
+
+            if n_next_digits == 0 && m_next_digits == 0 {
+                break;
+            }
+
+            let n_next_digits = decimal_digits(n_next_digits).unwrap();
+            let m_next_digits = decimal_digits(m_next_digits).unwrap();
+
+            let (upper_result_digit, new_carry) =
+                decimal_subtract_with_carry(n_next_digits.0, m_next_digits.0, carry);
+            carry = new_carry;
+
+            let (lower_result_digit, new_carry) =
+                decimal_subtract_with_carry(n_next_digits.1, m_next_digits.1, carry);
+            carry = new_carry;
+
+            let result_digit = (upper_result_digit << 4) | lower_result_digit;
+
+            if result_digit != 0 {
+                result_digits_vec.push(result_digit);
+            }
+        }
+
+        if result_digits_vec.len() == 0 {
+            result_digits_vec.push(0);
+        }
+
+        let result_negative = if negate_result == false { false } else { true };
+
+        Infinint {
+            negative: result_negative,
+            digits_vec: result_digits_vec,
+        }
+    }
 }
 
 impl fmt::Debug for Infinint {
@@ -198,45 +414,7 @@ impl From<i8> for Infinint {
 
 impl cmp::Ord for Infinint {
     fn cmp(&self, other: &Infinint) -> cmp::Ordering {
-        if self.digits_vec.len() < other.digits_vec.len() {
-            println!("a has less digits than b");
-            cmp::Ordering::Less
-        } else if self.digits_vec.len() > other.digits_vec.len() {
-            println!("a has more digits than b");
-            cmp::Ordering::Greater
-        } else {
-            let mut self_iter = self.digits_vec.iter().rev();
-            let mut other_iter = other.digits_vec.iter().rev();
-
-            loop {
-                let self_next_digits = *self_iter.next().unwrap_or(&0);
-                let other_next_digits = *other_iter.next().unwrap_or(&0);
-
-                if self_next_digits == 0 && other_next_digits == 0 {
-                    println!("both are None/0, returning equal");
-                    return cmp::Ordering::Equal;
-                }
-
-                let self_next_digits = decimal_digits(self_next_digits).unwrap();
-                let other_next_digits = decimal_digits(other_next_digits).unwrap();
-
-                if self_next_digits.1 < other_next_digits.1 {
-                    println!("{} < {}, a < b", self_next_digits.1, other_next_digits.1);
-                    return cmp::Ordering::Less;
-                } else if self_next_digits.1 > other_next_digits.1 {
-                    println!("{} > {}, a > b", self_next_digits.1, other_next_digits.1);
-                    return cmp::Ordering::Greater;
-                }
-
-                if self_next_digits.0 < other_next_digits.0 {
-                    println!("{} < {}, a < b", self_next_digits.0, other_next_digits.0);
-                    return cmp::Ordering::Less;
-                } else if self_next_digits.0 > other_next_digits.0 {
-                    println!("{} > {}, a > b", self_next_digits.0, other_next_digits.0);
-                    return cmp::Ordering::Greater;
-                }
-            }
-        }
+        Infinint::infinint_cmp(self, other, false, false)
     }
 }
 
@@ -274,62 +452,7 @@ impl ops::Add<&Infinint> for &Infinint {
     type Output = Infinint;
 
     fn add(self, other: &Infinint) -> Infinint {
-        if self.negative == false && other.negative == true {
-            return self - &-other;
-        } else if self.negative == true && other.negative == false {
-            return other - &-self;
-        } // otherwise, negative can be determined later
-
-        println!("CALCULATING: {} + {}", self, other);
-
-        let mut self_iter = self.digits_vec.iter();
-        let mut other_iter = other.digits_vec.iter();
-        let mut carry = 0;
-        let mut result_digits_vec: Vec<u8> = Vec::with_capacity(
-            2 * cmp::max(self.digits_vec.capacity(), other.digits_vec.capacity()),
-        );
-
-        loop {
-            let self_next_digits = *self_iter.next().unwrap_or(&0);
-            let other_next_digits = *other_iter.next().unwrap_or(&0);
-
-            if self_next_digits == 0 && other_next_digits == 0 {
-                break;
-            }
-
-            let self_next_digits = decimal_digits(self_next_digits).unwrap();
-            let other_next_digits = decimal_digits(other_next_digits).unwrap();
-
-            let (upper_result_digit, new_carry) =
-                decimal_add_with_carry(self_next_digits.0, other_next_digits.0, carry);
-            carry = new_carry;
-
-            let (lower_result_digit, new_carry) =
-                decimal_add_with_carry(self_next_digits.1, other_next_digits.1, carry);
-            carry = new_carry;
-
-            let result_digit = (upper_result_digit << 4) | lower_result_digit;
-
-            if result_digit != 0 {
-                result_digits_vec.push(result_digit);
-            }
-        }
-
-        if carry > 0 {
-            result_digits_vec.push(carry);
-        }
-
-        if result_digits_vec.len() == 0 {
-            result_digits_vec.push(0);
-        }
-
-        // since the first lines short-circuit return if the signs of self and other are different,
-        // we can assume self and other have the same sign. if that is the case, the sign of the result
-        // is the sign of both of the inputs, and since they are the same, we only have to check one.
-        Infinint {
-            negative: self.negative,
-            digits_vec: result_digits_vec,
-        }
+        Infinint::infinint_add(self, other, false, false, false)
     }
 }
 
@@ -337,64 +460,7 @@ impl ops::Sub<&Infinint> for &Infinint {
     type Output = Infinint;
 
     fn sub(self, other: &Infinint) -> Infinint {
-        if self.negative == false && other.negative == true {
-            return self + &-other;
-        } else if self.negative == true && other.negative == false {
-            return -&(&-self + other);
-        } else if self.negative == true && other.negative == true {
-            return &-other - &-self;
-        }
-
-        match self.cmp(other) {
-            cmp::Ordering::Less => return -&(other - self),
-            cmp::Ordering::Equal => return Infinint::from(0),
-            cmp::Ordering::Greater => (),
-        }
-
-        println!("CALCULATING: {} - {}", self, other);
-
-        let mut self_iter = self.digits_vec.iter();
-        let mut other_iter = other.digits_vec.iter();
-        let mut carry = 0;
-        let mut result_digits_vec: Vec<u8> = Vec::with_capacity(cmp::max(
-            self.digits_vec.capacity(),
-            other.digits_vec.capacity(),
-        ));
-
-        loop {
-            let self_next_digits = *self_iter.next().unwrap_or(&0);
-            let other_next_digits = *other_iter.next().unwrap_or(&0);
-
-            if self_next_digits == 0 && other_next_digits == 0 {
-                break;
-            }
-
-            let self_next_digits = decimal_digits(self_next_digits).unwrap();
-            let other_next_digits = decimal_digits(other_next_digits).unwrap();
-
-            let (upper_result_digit, new_carry) =
-                decimal_subtract_with_carry(self_next_digits.0, other_next_digits.0, carry);
-            carry = new_carry;
-
-            let (lower_result_digit, new_carry) =
-                decimal_subtract_with_carry(self_next_digits.1, other_next_digits.1, carry);
-            carry = new_carry;
-
-            let result_digit = (upper_result_digit << 4) | lower_result_digit;
-
-            if result_digit != 0 {
-                result_digits_vec.push(result_digit);
-            }
-        }
-
-        if result_digits_vec.len() == 0 {
-            result_digits_vec.push(0);
-        }
-
-        Infinint {
-            negative: false,
-            digits_vec: result_digits_vec,
-        }
+        Infinint::infinint_subtract(self, other, false, false, false)
     }
 }
 
