@@ -10,6 +10,9 @@ fn main() {
     let b = Infinint::from(-8);
     let c = Infinint::from(16);
     let d = Infinint::from(-32);
+    let e = Infinint::from(512);
+    let f = Infinint::from(999);
+    let g = Infinint::from(9999);
 
     println!("{} - {} = {}", c, a, &c - &a);
     println!("{} - {} = {}", a, b, &a - &b);
@@ -20,4 +23,8 @@ fn main() {
     println!("{} + {} = {}", d, c, &d + &c);
 
     println!("{} + {} = {}", a, -&a, &a + &(-&a));
+
+    println!("{} + {} = {}", e, e, &e + &e);
+    println!("{} + {} = {}", f, f, &f + &f);
+    println!("{} + {} = {}", g, g, &g + &g);
 }
