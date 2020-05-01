@@ -144,19 +144,17 @@ impl Infinint {
             _ => (((n as f64).abs().log10()) as usize / 2) + 1,
         };
         let next_exp = (bytes_needed as f64).log2().ceil();
-        let next_pow_of_two = 2.0_f64.powi(next_exp as i32);
+        let next_pow_of_two = 2_i128.pow(next_exp as u32);
         let mut digits_vec: Vec<u8> = Vec::with_capacity(next_pow_of_two as usize);
 
         if n > 0 {
             while n > 0 {
-                let mut d: u8;
-
                 let n_mod = (n % 10) as u8;
-                d = n_mod << 4;
+                let d = n_mod << 4;
                 n /= 10;
 
                 let n_mod = (n % 10) as u8;
-                d = n_mod | d;
+                let d = n_mod | d;
                 n /= 10;
 
                 digits_vec.push(d);
@@ -364,30 +362,24 @@ impl Infinint {
 
 impl fmt::Debug for Infinint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut debug_out = String::new();
-        debug_out.push_str(format!("\nnegative: {}\n", self.negative).as_str());
-        debug_out.push_str(format!("digits: [\n").as_str());
-        for d in &self.digits_vec {
-            debug_out.push_str(
-                format!(
-                    "    {:04b}_{:04b} -> ({}, {})\n",
-                    (0xF0 & *d) >> 4,
-                    0xF & *d,
-                    decimal_digit_high(*d).unwrap(),
-                    decimal_digit_low(*d).unwrap()
-                )
-                .as_str(),
-            );
-        }
-        debug_out.push_str("]");
-        write!(f, "{}", debug_out)
+        write!(f, "\nnegative: {}\n", self.negative)?;
+        write!(f, "{}", format!("digits: [\n"))?;
+        self.digits_vec.iter()
+            .cloned()
+            .map(|d| (d, decimal_digits(d).unwrap()))
+            .map(|(d, (lo, hi))| write!(f, "{}", format!(
+                    "\t{:04b}_{:04b} -> ({}, {})\n",
+                    (0xF0 & d) >> 4,
+                    0xF & d,
+                    lo,
+                    hi))).collect::<std::fmt::Result>()?;
+        write!(f, "]")
     }
 }
 
 impl fmt::Display for Infinint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut raw_digits = self.digits();
-
+        let raw_digits = self.digits();
         let num_digits = raw_digits.len();
         let num_chars = num_digits
             + if !f.alternate() {
@@ -396,17 +388,26 @@ impl fmt::Display for Infinint {
                 0
             };
 
-        let mut number = String::with_capacity(num_chars);
-
-        for i in 0..num_chars {
-            number.push(if !f.alternate() && (num_chars - i) % 4 == 0 {
-                ','
-            } else {
-                std::char::from_digit(raw_digits.pop().unwrap().into(), 10).unwrap()
-            });
+        let number = raw_digits.iter()
+                            .cloned()
+                            .map(u8::into)
+                            .map(|x: u32| std::char::from_digit(x, 10))
+                            .flatten()
+                            .rev();
+        if !f.alternate() {
+            let add_commas = |(i, x)| { 
+                if (num_chars - i) % 3 == 0 { 
+                    Some(',') 
+                } else { 
+                    None 
+                }.into_iter().chain(std::iter::once(x))
+            };
+            let number = number.enumerate() // Default display, we insert commas where necessary by chaining an option with the current digit.
+                     .flat_map(add_commas);
+            f.pad_integral(!self.negative, "", &number.collect::<String>())
+        } else {
+            f.pad_integral(!self.negative, "", &number.collect::<String>())
         }
-
-        f.pad_integral(!self.negative, "", &number)
     }
 }
 
@@ -520,20 +521,15 @@ impl ops::Neg for &Infinint {
 
     fn neg(self) -> Infinint {
         let new_negative = !self.negative;
-        let mut new_digits_vec = Vec::with_capacity(self.digits_vec.capacity());
-        new_digits_vec.resize(self.digits_vec.len(), 0);
-        new_digits_vec.copy_from_slice(&self.digits_vec[..]);
-
         Infinint {
             negative: new_negative,
-            digits_vec: new_digits_vec,
+            digits_vec: self.digits_vec.to_vec(),
         }
     }
 }
 
 impl ops::Add<&Infinint> for &Infinint {
     type Output = Infinint;
-
     fn add(self, other: &Infinint) -> Infinint {
         Infinint::infinint_add(self, other, false, false, false)
     }
