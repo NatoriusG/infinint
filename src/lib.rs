@@ -1,9 +1,41 @@
+// Copyright (C) 2020 Nathaniel Edgar
+// nathaniel.edgar.fl@gmail.com
+// GPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 //! Provides the Infinint struct, a semi-infinite-precision integer type. Infinint is written to be
 //! space-efficient - one nybble is required per decimal digit - but sacrifices some performance
 //! compared to primitive integer types. More details on implementation are contained in the
 //! Infinint struct documentation.
 
-use std::{cmp, fmt};
+// TODO: arithmetic
+// TODO: assignment
+// TODO: to/from string
+// TODO: to/from bitstream?
+// TODO: add credit to
+// - https://crates.io/crates/num-bigint
+// - https://crates.io/crates/ramp
+// - http://darbinding.sourceforge.net/libdarc/group__infinint.html
+// TODO: check for feature completeness from bigint/ramp
+// TODO: update docs to match crates like bigint
+// TODO: write comparison to other bigint crates:
+// - no unsafe code
+// - compact representation
+// - readable ints
+
+use std::{cmp, fmt, ops};
 
 /// A semi-infinite-precision integer type.
 ///
@@ -86,19 +118,22 @@ impl Infinint {
     /// assert_eq!(d, [8, 9, 9, 1]);
     /// ```
     pub fn digits(&self) -> Vec<u8> {
-        let mut digits_vector = Vec::with_capacity(self.digits_vec.len() * 2);
+        // initialize return value
+        // length is capped at 2 * internal vector length since there are max two decimal digits
+        //   per byte/digits_vec element
+        let mut digits = Vec::with_capacity(self.digits_vec.len() * 2);
 
         for byte in &self.digits_vec {
             let digit_pair = decimal_digits(*byte).unwrap();
-            digits_vector.push(digit_pair.0);
-            digits_vector.push(digit_pair.1);
+            digits.push(digit_pair.0);
+            digits.push(digit_pair.1);
         }
-        match digits_vector.last() {
-            Some(d) if *d == 0 => digits_vector.pop(),
+        match digits.last() {
+            Some(d) if *d == 0 => digits.pop(),
             _ => None,
         };
 
-        digits_vector
+        digits
     }
 
     fn digits_vec_from_int(n: u128) -> Vec<u8> {
@@ -460,7 +495,6 @@ impl From<i8> for Infinint {
     }
 }
 
-/*
 impl cmp::Ord for Infinint {
     fn cmp(&self, other: &Infinint) -> cmp::Ordering {
         Infinint::infinint_cmp(self, other, false, false)
@@ -512,7 +546,6 @@ impl ops::Sub<&Infinint> for &Infinint {
         Infinint::infinint_subtract(self, other, false, false, false)
     }
 }
-*/
 
 fn decimal_digits(n: u8) -> Result<(u8, u8), &'static str> {
     let high = decimal_digit_high(n)?;
@@ -563,7 +596,6 @@ mod tests {
         assert_eq!(test.digits_vec, [0b1000_1001, 0b1001_0001]);
     }
 
-    /*
     #[test]
     fn simple_addition_subtraction() {
         for x in 0..100 {
@@ -587,5 +619,4 @@ mod tests {
             }
         }
     }
-    */
 }
