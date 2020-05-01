@@ -1,5 +1,45 @@
-use std::{cmp, fmt, ops};
+//! Provides the Infinint struct, a semi-infinite-precision integer type. Infinint is written to be
+//! space-efficient - one nybble is required per decimal digit - but sacrifices some performance
+//! compared to primitive integer types. More details on implementation are contained in the
+//! Infinint struct documentation.
 
+use std::{cmp, fmt};
+
+/// A semi-infinite-precision integer type.
+///
+/// # Examples
+/// ```rust
+/// # use infinint::Infinint;
+/// let a = Infinint::new();
+/// assert_eq!(a.negative(), false);
+/// assert_eq!(a.digits(), [0]);
+///
+/// let b = Infinint::from(123_456);
+/// assert_eq!(b.digits(), [6, 5, 4, 3, 2, 1]);
+///
+/// // add operators when supported
+/// ```
+///
+/// # Implementation
+/// The `Infinint` struct contains two elements: a boolean to identify the integer as positive or
+/// negative, and a vector of bytes containing the decimal digits. Each byte in the vector holds
+/// data for two decimal digits: one in the upper nybble, and one in the lower. The decimal digits
+/// are stored in little-endian order.
+///
+/// For example, the decimal number `1998` would be stored as the following two bytes:
+/// ```lang-none
+/// [1000_1001, 1001_0001]
+/// ```
+/// which represent these decimal digit pairs:
+/// ```lang-none
+/// [(8, 9), (9, 1)]
+/// ```
+///
+/// If the number of decimal digits is uneven, the lower nybble of the final byte will be 0. For
+/// example:
+/// ```lang-none
+/// 137 = [0111_0011, 0001_0000] = [(7, 3), (1, 0)]
+/// ```
 pub struct Infinint {
     negative: bool,
     digits_vec: Vec<u8>,
@@ -7,6 +47,13 @@ pub struct Infinint {
 
 #[allow(dead_code)]
 impl Infinint {
+    /// Initializes a new Infinint with the value +0.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use infinint::Infinint;
+    /// let x = Infinint::new();
+    /// ```
     pub fn new() -> Infinint {
         Infinint {
             negative: false,
@@ -14,7 +61,31 @@ impl Infinint {
         }
     }
 
-    fn digits(&self) -> Vec<u8> {
+    /// Returns a boolean indicating if the Infinint is negative.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use infinint::Infinint;
+    /// let x = Infinint::from(-3);
+    /// let n = x.negative();
+    /// assert_eq!(n, true);
+    /// ```
+    pub fn negative(&self) -> bool {
+        self.negative
+    }
+
+    /// Returns a vector where each element is a single digit of the Infinint.
+    ///
+    /// As with the underlying data, the digits are returned in little-endian order.
+    ///
+    /// # Examples
+    /// ```rust
+    /// # use infinint::Infinint;
+    /// let x = Infinint::from(1998);
+    /// let d = x.digits();
+    /// assert_eq!(d, [8, 9, 9, 1]);
+    /// ```
+    pub fn digits(&self) -> Vec<u8> {
         let mut digits_vector = Vec::with_capacity(self.digits_vec.len() * 2);
 
         for byte in &self.digits_vec {
@@ -389,6 +460,7 @@ impl From<i8> for Infinint {
     }
 }
 
+/*
 impl cmp::Ord for Infinint {
     fn cmp(&self, other: &Infinint) -> cmp::Ordering {
         Infinint::infinint_cmp(self, other, false, false)
@@ -440,6 +512,7 @@ impl ops::Sub<&Infinint> for &Infinint {
         Infinint::infinint_subtract(self, other, false, false, false)
     }
 }
+*/
 
 fn decimal_digits(n: u8) -> Result<(u8, u8), &'static str> {
     let high = decimal_digit_high(n)?;
@@ -490,6 +563,7 @@ mod tests {
         assert_eq!(test.digits_vec, [0b1000_1001, 0b1001_0001]);
     }
 
+    /*
     #[test]
     fn simple_addition_subtraction() {
         for x in 0..100 {
@@ -513,4 +587,5 @@ mod tests {
             }
         }
     }
+    */
 }
