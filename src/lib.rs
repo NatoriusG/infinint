@@ -478,3 +478,39 @@ fn decimal_subtract_with_carry(n: u8, m: u8, carry: u8) -> (u8, u8) {
     };
     (result, carry)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn infinint_declaration() {
+        let test = Infinint::from(1998);
+        assert_eq!(test.negative, false);
+        assert_eq!(test.digits_vec, [0b1000_1001, 0b1001_0001]);
+    }
+
+    #[test]
+    fn simple_addition_subtraction() {
+        for x in 0..100 {
+            for y in 0..100 {
+                let a = Infinint::from(x);
+                let b = Infinint::from(y);
+                assert_eq!(&a + &b, Infinint::from(x + y));
+                assert_eq!(&a - &b, Infinint::from(x - y));
+            }
+        }
+    }
+
+    #[test]
+    fn complex_addition_subtraction() {
+        for x in -25..25 {
+            for y in -25..25 {
+                let a = Infinint::from(x);
+                let b = Infinint::from(y);
+                assert_eq!(&a + &b, Infinint::from(x + y));
+                assert_eq!(&a - &b, Infinint::from(x - y));
+            }
+        }
+    }
+}
